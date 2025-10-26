@@ -1,0 +1,44 @@
+# Файлы сборки Visual Studio
+[Bb]in/
+[Oo]bj/
+x64/
+x86/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.msi
+*.vcxproj.user
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.db
+*.suo
+*.tlb
+*.tlh
+*.tmp
+*.log
+*.vs/
+.vs/
+
+# Файлы операционных систем
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Резервные копии
+*.bak
+*.tmp
+*.backup
+
+# Системные файлы
+*.sys
+*.dmp
+
+# Промежуточные файлы
+*.cache
