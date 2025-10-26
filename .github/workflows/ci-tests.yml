@@ -1,0 +1,93 @@
+name: C++ CI - Build and Run Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest  # Используем Windows для совместимости с Visual Studio
+    
+    steps:
+    # Шаг 1: Получение кода из репозитория
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    # Шаг 2: Настройка инструментов сборки Visual Studio
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      
+    # Шаг 3: Вывод информации о проекте (для отладки)
+    - name: Project Structure
+      run: |
+        echo "=== СТРУКТУРА ПРОЕКТА ==="
+        echo "Файлы в корне:"
+        dir
+        echo ""
+        echo "Solution файлы:"
+        dir *.sln
+        echo ""
+        echo "Файлы проектов:"
+        dir /s *.vcxproj
+      
+    # Шаг 4: Восстановление NuGet пакетов (если нужны)
+    - name: Restore NuGet Packages
+      run: |
+        echo "=== ВОССТАНОВЛЕНИЕ NUGET ПАКЕТОВ ==="
+        if exist "packages.config" (
+          nuget restore
+        ) else (
+          echo "Файл packages.config не найден, пропускаем восстановление"
+        )
+      
+    # Шаг 5: Сборка решения
+    - name: Build Solution
+      run: |
+        echo "=== СБОРКА РЕШЕНИЯ ==="
+        msbuild TestingSystem.sln /p:Configuration=Release /p:Platform=x64 /p:RestorePackages=false /verbosity:minimal
+      
+    # Шаг 6: Поиск собранных тестов
+    - name: Find Test Executable
+      run: |
+        echo "=== ПОИСК ИСПОЛНЯЕМОГО ФАЙЛА ТЕСТОВ ==="
+        echo "Рекурсивный поиск Tests.exe:"
+        dir Tests.exe /s
+        echo ""
+        echo "Содержимое папок:"
+        dir /s
+      
+    # Шаг 7: Запуск модульных тестов
+    - name: Run Unit Tests
+      run: |
+        echo "=== ЗАПУСК МОДУЛЬНЫХ ТЕСТОВ ==="
+        
+        # Пробуем разные возможные пути к тестам
+        if exist "Tests\x64\Release\Tests.exe" (
+          echo "✅ Найден Tests.exe в Tests\x64\Release\"
+          echo "Запуск тестов..."
+          Tests\x64\Release\Tests.exe
+        ) else if exist "x64\Release\Tests\Tests.exe" (
+          echo "✅ Найден Tests.exe в x64\Release\Tests\"
+          echo "Запуск тестов..."
+          x64\Release\Tests\Tests.exe
+        ) else if exist "Tests\Tests.exe" (
+          echo "✅ Найден Tests.exe в Tests\"
+          echo "Запуск тестов..."
+          Tests\Tests.exe
+        ) else (
+          echo "❌ Файл Tests.exe не найден по ожидаемым путям!"
+          echo "Доступные .exe файлы:"
+          dir *.exe /s
+          exit 1
+        )
+      
+    # Шаг 8: Финальный результат
+    - name: Test Completion
+      run: |
+        echo ""
+        echo "🎉 =============================== 🎉"
+        echo "✅ ВСЕ ТЕСТЫ УСПЕШНО ЗАВЕРШЕНЫ!"
+        echo "✅ CI/CD НАСТРОЕН КОРРЕКТНО!"
+        echo "🎉 =============================== 🎉"
