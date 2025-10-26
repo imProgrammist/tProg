@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: windows-latest  # Используем Windows для совместимости с Visual Studio
+    runs-on: windows-latest
     
     steps:
     # Шаг 1: Получение кода из репозитория
@@ -24,23 +24,23 @@ jobs:
       run: |
         echo "=== СТРУКТУРА ПРОЕКТА ==="
         echo "Файлы в корне:"
-        dir
+        Get-ChildItem
         echo ""
         echo "Solution файлы:"
-        dir *.sln
+        Get-ChildItem -Filter "*.sln"
         echo ""
         echo "Файлы проектов:"
-        dir /s *.vcxproj
+        Get-ChildItem -Recurse -Filter "*.vcxproj" | Format-Table Name, Directory
       
-    # Шаг 4: Восстановление NuGet пакетов (если нужны)
+    # Шаг 4: Восстановление NuGet пакетов
     - name: Restore NuGet Packages
       run: |
         echo "=== ВОССТАНОВЛЕНИЕ NUGET ПАКЕТОВ ==="
-        if exist "packages.config" (
+        if (Test-Path "packages.config") {
           nuget restore
-        ) else (
+        } else {
           echo "Файл packages.config не найден, пропускаем восстановление"
-        )
+        }
       
     # Шаг 5: Сборка решения
     - name: Build Solution
@@ -53,35 +53,60 @@ jobs:
       run: |
         echo "=== ПОИСК ИСПОЛНЯЕМОГО ФАЙЛА ТЕСТОВ ==="
         echo "Рекурсивный поиск Tests.exe:"
-        dir Tests.exe /s
+        Get-ChildItem -Recurse -Filter "Tests.exe" | Format-Table FullName
         echo ""
-        echo "Содержимое папок:"
-        dir /s
+        echo "Все .exe файлы:"
+        Get-ChildItem -Recurse -Filter "*.exe" | Format-Table Name, Directory
+        echo ""
+        echo "Содержимое ключевых папок:"
+        if (Test-Path "Tests") {
+          echo "Папка Tests:"
+          Get-ChildItem "Tests" -Recurse | Format-Table Name
+        }
+        if (Test-Path "x64") {
+          echo "Папка x64:"
+          Get-ChildItem "x64" -Recurse | Format-Table Name
+        }
       
     # Шаг 7: Запуск модульных тестов
     - name: Run Unit Tests
       run: |
         echo "=== ЗАПУСК МОДУЛЬНЫХ ТЕСТОВ ==="
         
-        # Пробуем разные возможные пути к тестам
-        if exist "Tests\x64\Release\Tests.exe" (
-          echo "✅ Найден Tests.exe в Tests\x64\Release\"
+        # Определяем путь к тестам
+        $testPath = $null
+        
+        if (Test-Path "Tests\x64\Release\Tests.exe") {
+          $testPath = "Tests\x64\Release\Tests.exe"
+        } elseif (Test-Path "x64\Release\Tests\Tests.exe") {
+          $testPath = "x64\Release\Tests\Tests.exe"
+        } elseif (Test-Path "Tests\Tests.exe") {
+          $testPath = "Tests\Tests.exe"
+        } else {
+          # Пробуем найти любой Tests.exe
+          $foundTests = Get-ChildItem -Recurse -Filter "Tests.exe" | Select-Object -First 1
+          if ($foundTests) {
+            $testPath = $foundTests.FullName
+          }
+        }
+        
+        if ($testPath) {
+          echo "✅ Найден Tests.exe: $testPath"
           echo "Запуск тестов..."
-          Tests\x64\Release\Tests.exe
-        ) else if exist "x64\Release\Tests\Tests.exe" (
-          echo "✅ Найден Tests.exe в x64\Release\Tests\"
-          echo "Запуск тестов..."
-          x64\Release\Tests\Tests.exe
-        ) else if exist "Tests\Tests.exe" (
-          echo "✅ Найден Tests.exe в Tests\"
-          echo "Запуск тестов..."
-          Tests\Tests.exe
-        ) else (
-          echo "❌ Файл Tests.exe не найден по ожидаемым путям!"
+          & $testPath
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -eq 0) {
+            echo "✅ Тесты выполнены успешно!"
+          } else {
+            echo "❌ Тесты завершились с ошибкой (код: $exitCode)"
+            exit $exitCode
+          }
+        } else {
+          echo "❌ Файл Tests.exe не найден!"
           echo "Доступные .exe файлы:"
-          dir *.exe /s
+          Get-ChildItem -Recurse -Filter "*.exe" | Format-Table FullName
           exit 1
-        )
+        }
       
     # Шаг 8: Финальный результат
     - name: Test Completion
