@@ -46,7 +46,7 @@ jobs:
     - name: Build Solution
       run: |
         echo "=== СБОРКА РЕШЕНИЯ ==="
-        msbuild TestingSystem.sln /p:Configuration=Release /p:Platform=x64 /p:RestorePackages=false /verbosity:minimal
+        msbuild tProg.sln /p:Configuration=Release /p:Platform=x64 /p:RestorePackages=false /verbosity:minimal
       
     # Шаг 6: Поиск собранных тестов
     - name: Find Test Executable
